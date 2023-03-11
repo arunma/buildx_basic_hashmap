@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
     mem,
@@ -43,7 +44,11 @@ where
         None
     }
 
-    fn get_bucket(&self, key: &K) -> Option<usize> {
+    fn get_bucket<Q>(&self, key: &Q) -> Option<usize>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         if self.buckets.is_empty() {
             None
         } else {
@@ -73,23 +78,35 @@ where
         mem::replace(&mut self.buckets, new_buckets);
     }
 
-    pub fn contains_key(&self, key: &K) -> bool {
+    pub fn contains_key<Q>(&self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         self.get(key).is_some()
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<(K, V)> {
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         let bucket_index = self.get_bucket(key)?;
-        let mut bucket = &mut self.buckets[bucket_index];
-        let index = bucket.iter().position(|(k, v)| k == key)?;
+        let bucket = &mut self.buckets[bucket_index];
+        let index = bucket.iter().position(|(k, v)| k.borrow() == key)?;
         self.len -= 1;
         Some(bucket.swap_remove(index))
     }
 
-    pub fn get(&self, key: &K) -> Option<&V> {
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         let bucket_index = self.get_bucket(key)?;
         self.buckets[bucket_index]
             .iter()
-            .find(|(ref k, _)| k == key)
+            .find(|(ref k, _)| k.borrow() == key)
             .map(|(ref k, ref v)| v)
     }
 

@@ -22,7 +22,7 @@ fn main() {
     for &book in &to_find {
         match book_reviews.get(book) {
             Some(review) => println!("{}:{}", book, review),
-            None => println!("{} is unreviewed" book),
+            None => println!("{} is unreviewed", book),
         }
     }
 
