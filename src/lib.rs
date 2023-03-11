@@ -89,8 +89,8 @@ where
         let bucket_index = self.get_bucket(key)?;
         self.buckets[bucket_index]
             .iter()
-            .find(|(k, v)| k == key)
-            .map(|(k, v)| v)
+            .find(|(ref k, _)| k == key)
+            .map(|(ref k, ref v)| v)
     }
 
     pub fn len(&self) -> usize {
@@ -99,6 +99,47 @@ where
 
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+}
+
+pub struct Iter<'a, K, V> {
+    map: &'a HashMap<K, V>,
+    bucket: usize,
+    at: usize,
+}
+
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.map.buckets.get(self.bucket) {
+            Some(bucket) => match bucket.get(self.at) {
+                Some(&(ref k, ref v)) => {
+                    self.at += 1;
+                    return Some((k, v));
+                }
+                None => {
+                    self.bucket += 1;
+                    self.at = 0;
+                    return self.next();
+                }
+            },
+            None => return None,
+        }
+    }
+}
+
+impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
+    type Item = (&'a K, &'a V);
+
+    type IntoIter = Iter<'a, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter {
+            map: self,
+            bucket: 0,
+            at: 0,
+        }
     }
 }
 
@@ -139,5 +180,26 @@ mod tests {
         map.remove(&"a");
         assert_eq!(map.get(&"a"), None);
         assert_eq!(map.contains_key(&"a"), false);
+    }
+
+    #[test]
+    fn iterator() {
+        let mut map = HashMap::new();
+        map.insert("a", 1);
+        map.insert("b", 2);
+        map.insert("c", 3);
+        map.insert("d", 4);
+
+        for (&k, &v) in &map {
+            match k {
+                "a" => assert_eq!(v, 1),
+                "b" => assert_eq!(v, 2),
+                "c" => assert_eq!(v, 3),
+                "d" => assert_eq!(v, 4),
+                _ => unreachable!(),
+            }
+        }
+
+        assert_eq!(map.len(), 4);
     }
 }
