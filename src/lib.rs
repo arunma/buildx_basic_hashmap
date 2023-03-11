@@ -112,19 +112,21 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.map.buckets.get(self.bucket) {
-            Some(bucket) => match bucket.get(self.at) {
-                Some(&(ref k, ref v)) => {
-                    self.at += 1;
-                    return Some((k, v));
-                }
-                None => {
-                    self.bucket += 1;
-                    self.at = 0;
-                    return self.next();
-                }
-            },
-            None => return None,
+        loop {
+            match self.map.buckets.get(self.bucket) {
+                Some(bucket) => match bucket.get(self.at) {
+                    Some(&(ref k, ref v)) => {
+                        self.at += 1;
+                        break Some((k, v));
+                    }
+                    None => {
+                        self.bucket += 1;
+                        self.at = 0;
+                        continue;
+                    }
+                },
+                None => break None,
+            }
         }
     }
 }
